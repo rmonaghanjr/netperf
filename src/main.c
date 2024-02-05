@@ -11,6 +11,7 @@ int main(int argc, char* argv[]) {
         printf("Usage: %s <ipaddr>\n", argv[0]);
         return 1;
     } 
+
     char* ip = resolve_address(argv[1]);
     printf("collecting statistics for connection to %s (%s)...\n", ip, argv[1]);
     free(ip);
