@@ -4,10 +4,9 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <netdb.h>
+#include <poll.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <sys/select.h>
-#include <sys/un.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/ip_icmp.h>
@@ -60,16 +59,19 @@ int traceroute(char* destination, int hop_limit) {
         inet_pton(AF_INET, destination, &(ip_header->ip_dst));
         ip_header->ip_sum = packet_checksum((unsigned short *) buffer, 9);
 
-        // oh bruh i cant use this on macos...have to research a workaround
+        struct ih_idseq seq;
+        seq.icd_id = 0;
+        seq.icd_seq = curr_hop + 1;
 
-        struct icmphdr* icmp_header = (struct icmphdr*) (buffer + 20);
-        icmp_header->type = ICMP_ECHO;
-        icmp_header->code = 0;
-        icmp_header->checksum = 0;
-        icmp_header->un.echo.id = 0;
-        icmp_header->un.echo.sequence = curr_hop + 1;
-        icmp_header->checksum = packet_checksum((unsigned short *) (buffer + 20), 4);
-        sendto(sfd, buffer, sizeof(struct ip) + sizeof(struct icmphdr), 0, (struct sockaddr*) & addr, sizeof(addr));
+        struct icmp* icmp_header = (struct icmp*) (buffer + 20);
+        icmp_header->icmp_type = ICMP_ECHO;
+        icmp_header->icmp_code = 0;
+        icmp_header->icmp_cksum = 0;
+        icmp_header->icmp_hun.ih_idseq = seq;
+        icmp_header->icmp_cksum = packet_checksum((unsigned short *) (buffer + 20), 4);
+        sendto(sfd, buffer, sizeof(struct ip) + sizeof(struct icmp), 0, (struct sockaddr*) & addr, sizeof(addr));
+
+
     }
 
     return 0;
