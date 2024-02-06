@@ -7,14 +7,21 @@
 #include <poll.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <net/if.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/ip_icmp.h>
 #include <arpa/inet.h>
 
+#include "../include/netutils.h"
 #include "../include/traceroute.h"
 
 #define BUFFER_SIZE 4096
+
+void print_icmp_packet(struct icmp* header) {
+    printf("type:%d\n", header->icmp_type);
+    printf("code:%d\n", header->icmp_code);
+}
 
 unsigned short packet_checksum(unsigned short* buffer, int num_words) {
     unsigned long sum;
@@ -28,8 +35,9 @@ unsigned short packet_checksum(unsigned short* buffer, int num_words) {
 }
 
 int traceroute(char* destination, int hop_limit) {
+    char* source = src_ipaddr(); 
     int sfd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
-    char buffer[4096];
+    char buffer[4096] = {0};
     struct ip* ip_header = (struct ip*) buffer;
     int curr_hop = 0;
 
@@ -45,17 +53,16 @@ int traceroute(char* destination, int hop_limit) {
     addr.sin_family = AF_INET;
     inet_pton(AF_INET, destination, &(addr.sin_addr));
 
-    while (1) {
+    while (curr_hop < hop_limit) {
         ip_header->ip_hl = 5;
         ip_header->ip_v = 4;
         ip_header->ip_tos = 0;
-        ip_header->ip_len = 20 + 8;
+        ip_header->ip_len = 28;
         ip_header->ip_id = 10000;
         ip_header->ip_off = 0;
         ip_header->ip_ttl = curr_hop;
         ip_header->ip_p = IPPROTO_ICMP;
-
-        inet_pton(AF_INET, "192.168.1.168", &(ip_header->ip_src));
+        inet_pton(AF_INET, source, &(ip_header->ip_src));
         inet_pton(AF_INET, destination, &(ip_header->ip_dst));
         ip_header->ip_sum = packet_checksum((unsigned short *) buffer, 9);
 
@@ -71,9 +78,22 @@ int traceroute(char* destination, int hop_limit) {
         icmp_header->icmp_cksum = packet_checksum((unsigned short *) (buffer + 20), 4);
         sendto(sfd, buffer, sizeof(struct ip) + sizeof(struct icmp), 0, (struct sockaddr*) & addr, sizeof(addr));
 
+        char buffnr[BUFFER_SIZE] = {0};
+        struct sockaddr_in addrn;
+        socklen_t len = sizeof(struct sockaddr_in);
+        recvfrom(sfd, buffnr, sizeof(buffnr), 0, (struct sockaddr*) & addrn, &len);
 
+        struct icmp* icmp_headern = (struct icmp*) (buffer + 20);
+        printf("at addr %s at hop %d...\n", inet_ntoa(addrn.sin_addr), curr_hop);
+        if (strcmp(inet_ntoa(addrn.sin_addr), destination) == 0) {
+            printf("DONE!\n");
+            free(source);
+            return 0;
+        }
+
+        curr_hop++;
     }
-
-    return 0;
+    free(source);
+    return 1;
 }
 

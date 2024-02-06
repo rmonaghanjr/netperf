@@ -5,10 +5,38 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <stdio.h>
+#include <netinet/in.h>
+#include <unistd.h>
 
 #include "../include/netutils.h"
 
 #define BUFFER_SIZE 1024
+
+char* src_ipaddr() {
+    char hostbuffer[256];
+    char* strbuf = (char*) malloc(BUFFER_SIZE);
+
+    struct hostent *host_entry;
+    int host_name;
+
+    // To retrieve hostname
+    host_name = gethostname(hostbuffer, sizeof(hostbuffer));
+    if (host_name < 0) {
+        perror("hostname");
+        return NULL;
+    }
+
+    // To retrieve host information
+    host_entry = gethostbyname(hostbuffer);
+    if (host_entry < 0) {
+        perror("gethostbyname");
+        return NULL;
+    }
+
+    strcpy(strbuf, inet_ntoa(*((struct in_addr*) host_entry->h_addr_list[0])));
+
+    return strbuf;
+}
 
 char* resolve_address(char* domain) {
     char* resolved = (char*) malloc(BUFFER_SIZE);

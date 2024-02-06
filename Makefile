@@ -27,7 +27,7 @@ $(BUILD_DIR)/$(EXECUTABLE): $(OBJECTS)
 
 run:
 	make
-	./$(BUILD_DIR)/netperf stevens.edu
+	sudo ./$(BUILD_DIR)/netperf stevens.edu
 
 new: clean
 	make
