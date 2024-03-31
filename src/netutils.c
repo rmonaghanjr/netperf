@@ -40,14 +40,14 @@ char* src_ipaddr() {
 
 char* resolve_address(char* domain) {
     char* resolved = (char*) malloc(BUFFER_SIZE);
-    memset(resolved, 0, BUFFER_SIZE);
-
     int error;
     struct addrinfo hints, *res, *result;
     void* ptr;
+    memset(resolved, 0, BUFFER_SIZE);
 
     memset(&hints, 0, sizeof(hints));
-    hints.ai_family = PF_UNSPEC;
+    // PF_UNSPEC was causing some domains to resolve to ipv6 addrs, so we want to specify the right type here
+    hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags |= AI_CANONNAME;
 

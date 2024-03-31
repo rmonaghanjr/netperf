@@ -1,4 +1,4 @@
-COMPILER := clang
+COMPILER := gcc
 FLAGS := -g -O3
 BUILD_DIR := build
 EXECUTABLE := netperf

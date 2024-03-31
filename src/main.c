@@ -16,7 +16,7 @@ int main(int argc, char* argv[]) {
     char* ip = resolve_address(argv[1]);
     printf("collecting statistics for connection to %s (%s)...\n", ip, argv[1]);
 
-    int result = traceroute(ip, 64);
+    int result = traceroute(ip);
 
     free(ip);
     return 0;
