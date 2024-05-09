@@ -19,9 +19,8 @@
 
 #include "../include/netutils.h"
 #include "../include/traceroute.h"
-
-#define BUFFER_SIZE 4096
-#define HOP_LIMIT 64
+#include "../include/ll.h"
+#include "../include/defs.h"
 
 void print_icmp_packet(struct icmp* header) {
     printf("type:%d\n", header->icmp_type);
@@ -39,11 +38,14 @@ unsigned short packet_checksum(unsigned short* buffer, int num_words) {
     return ~sum;
 }
 
-int traceroute(char* destination) {
+int traceroute(char* destination, void* v_ll) {
+    struct traceroute_ll* ll = (struct traceroute_ll*) v_ll;
     int curr_hop = 0;
-    int done, result;
+    int done = 0;
+    int result = 0;
+
     while (!done && curr_hop < HOP_LIMIT) {
-        result = send_icmp_packet(destination, curr_hop, &done);
+        result = send_icmp_packet(destination, curr_hop, &done, ll);
         if (result < 0) {
             perror("send_icmp_packet");
             return -1;
@@ -53,13 +55,17 @@ int traceroute(char* destination) {
     return 0;
 }
 
-int send_icmp_packet(char* destination, int curr_hop, int* done) {
+int send_icmp_packet(char* destination, int curr_hop, int* done, void* v_ll) {
+    struct traceroute_ll* ll = (struct traceroute_ll*) v_ll;
     char buffer[BUFFER_SIZE] = {0};
     char buffnr[BUFFER_SIZE] = {0};
     char* source;
     int sfd, one, ready;
     fd_set rfs;
     socklen_t len = sizeof(struct sockaddr_in);
+    clock_t start, end;
+    float elapsed_ms;
+    float average = 0;
     struct ip* ip_header;
     struct sockaddr_in addr, addrn;
     struct ih_idseq seq;
@@ -107,28 +113,55 @@ int send_icmp_packet(char* destination, int curr_hop, int* done) {
     FD_ZERO(&rfs);
     FD_SET(sfd, &rfs);
 
-    timeout.tv_sec = 5;
+    timeout.tv_sec = TIMEOUT;
     timeout.tv_usec = 0;
-    sendto(sfd, buffer, sizeof(struct ip) + sizeof(struct icmp), 0, (struct sockaddr*) & addr, sizeof(addr));
 
-    ready = select(sfd + 1, &rfs, NULL, NULL, &timeout);
-    if (ready < 0) {
-        perror("ready");
-        free(source);
-        return -1;
-    } else if (ready == 0) {
-        printf("timed out at hop %d...\n", curr_hop);
-    } else {
-        recvfrom(sfd, buffnr, sizeof(buffnr), 0, (struct sockaddr*) & addrn, &len);
-        
-        icmp_headern = (struct icmp*) (buffer + 20);
-        printf("at addr %s at hop %d...\n", inet_ntoa(addrn.sin_addr), curr_hop);
-        if (strcmp(inet_ntoa(addrn.sin_addr), destination) == 0) {
-            *done = 1;
-            printf("DONE!\n");
+    struct link_stats* stats = (struct link_stats*) malloc(sizeof(struct link_stats));
+    memset(stats, 0, sizeof(struct link_stats));
+    // link destination
+    stats->hop = curr_hop;
+    stats->timed_out = 0;
+
+    for (int i = 0; i < TESTS; i++) {
+        start = clock();
+        sendto(sfd, buffer, sizeof(struct ip) + sizeof(struct icmp), 0, (struct sockaddr*) & addr, sizeof(addr));
+
+        ready = select(sfd + 1, &rfs, NULL, NULL, &timeout);
+        if (ready < 0) {
+            perror("ready");
             free(source);
+            return -1;
+        } else if (ready == 0) {
+            printf("timed out at hop %d...\n", curr_hop);
+            stats->timed_out = 1;
+            ll_append(ll, stats);
             return 0;
+        } else {
+            recvfrom(sfd, buffnr, sizeof(buffnr), 0, (struct sockaddr*) & addrn, &len);
+            char* ip = (char*) malloc(16);
+            strncpy(ip, inet_ntoa(addrn.sin_addr), 16);
+            stats->ip = ip;
+            end = clock();
+            elapsed_ms = (((double) (end - start)) / CLOCKS_PER_SEC) * 100000;
+
+            stats->elapsed_ms[i] = elapsed_ms;
+            average += elapsed_ms;
         }
+
+        usleep(100000);
+    }
+
+    icmp_headern = (struct icmp*) (buffer + 20);
+    printf("at addr %s at hop %d...(%4.2fms)\n", inet_ntoa(addrn.sin_addr), curr_hop, average / TESTS);
+
+    ll_append(ll, stats);
+
+    if (strcmp(inet_ntoa(addrn.sin_addr), destination) == 0) {
+        *done = 1;
+        stats->is_dest = 1;
+        printf("reached destination! collecting statistics...\n");
+        free(source);
+        return 0;
     }
 
     free(source);

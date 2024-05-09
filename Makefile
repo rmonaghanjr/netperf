@@ -3,7 +3,7 @@ FLAGS := -g -O3
 BUILD_DIR := build
 EXECUTABLE := netperf
 
-FILES := main.c netutils.c traceroute.c
+FILES := main.c netutils.c traceroute.c ll.c stats.c
 OBJECTS := $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(FILES)))
 
 .PHONY: $(EXECUTABLE)

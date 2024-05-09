@@ -9,11 +9,10 @@
 #include <unistd.h>
 
 #include "../include/netutils.h"
-
-#define BUFFER_SIZE 1024
+#include "../include/defs.h"
 
 char* src_ipaddr() {
-    char hostbuffer[256];
+    char hostbuffer[256] = {0};
     char* strbuf = (char*) malloc(BUFFER_SIZE);
 
     struct hostent *host_entry;
