@@ -7,14 +7,14 @@
 
 void print_link_stats_table(struct traceroute_ll *ll) {
     int max_ip_strlen = 16;
-    printf("|-----|----------------|----------|-------------|----------|----------|\n");
-    printf("| Hop | Link           | Avg (ms) | Stddev (ms) | Max (ms) | Min (ms) |\n");
-    printf("|-----|----------------|----------|-------------|----------|----------|\n");
+    printf("|-----|-----------------|----------|-------------|----------|----------|\n");
+    printf("| Hop | Link            | Avg (ms) | Stddev (ms) | Max (ms) | Min (ms) |\n");
+    printf("|-----|-----------------|----------|-------------|----------|----------|\n");
     struct node* current = (*ll).head;
     while (current != NULL) {
         if ((*current).data->timed_out) {
-            printf("|  %02d | ICMP_ECHO might be blocked on this router...TIMED OUT (5s)    |\n", (*current).data->hop);
-            printf("|-----|----------------|----------|-------------|----------|----------|\n");
+            printf("|  %02d | ICMP_ECHO might be blocked on this router...TIMED OUT (5s)     |\n", (*current).data->hop);
+            printf("|-----|-----------------|----------|-------------|----------|----------|\n");
             current = current->next;
             continue;
         }
@@ -25,7 +25,7 @@ void print_link_stats_table(struct traceroute_ll *ll) {
 
 void print_link_stats_row(struct link_stats *ls) {
     int in_strlen = strlen(ls->ip);
-    int max_ip_strlen = 14;
+    int max_ip_strlen = 15;
     char ipbuf[16] = {0};
 
     if (in_strlen < max_ip_strlen) {
@@ -39,12 +39,12 @@ void print_link_stats_row(struct link_stats *ls) {
     }
 
     printf("| %c%02d | %s | %05.2f    | %05.2f       | %05.2f    | %05.2f    |\n", ls->is_dest ? '*' : ' ', ls->hop,  ipbuf, get_link_avg(ls), get_link_stddev(ls), get_link_max(ls), get_link_min(ls));
-    printf("|-----|----------------|----------|-------------|----------|----------|\n");
+    printf("|-----|-----------------|----------|-------------|----------|----------|\n");
 }
 
 void print_link_stats_prominent(struct link_stats *ls) {
     int in_strlen = strlen(ls->ip);
-    int max_ip_strlen = 14;
+    int max_ip_strlen = 15;
     char ipbuf[16] = {0};
 
     if (in_strlen < max_ip_strlen) {
@@ -58,17 +58,17 @@ void print_link_stats_prominent(struct link_stats *ls) {
     }
 
     printf("\nBottleneck Link\n");
-    printf("|-------------|----------------|\n");
+    printf("|-------------|-----------------|\n");
     printf("|        Link | %s |\n", ipbuf);
-    printf("|-------------|----------------|\n");
-    printf("|    Avg (ms) | %05.2f          |\n", get_link_avg(ls));
-    printf("|-------------|----------------|\n");
-    printf("| Stddev (ms) | %05.2f          |\n", get_link_stddev(ls));
-    printf("|-------------|----------------|\n");
-    printf("|    Max (ms) | %05.2f          |\n", get_link_max(ls));
-    printf("|-------------|----------------|\n");
-    printf("|    Min (ms) | %05.2f          |\n", get_link_min(ls));
-    printf("|-------------|----------------|\n");
+    printf("|-------------|-----------------|\n");
+    printf("|    Avg (ms) | %05.2f           |\n", get_link_avg(ls));
+    printf("|-------------|-----------------|\n");
+    printf("| Stddev (ms) | %05.2f           |\n", get_link_stddev(ls));
+    printf("|-------------|-----------------|\n");
+    printf("|    Max (ms) | %05.2f           |\n", get_link_max(ls));
+    printf("|-------------|-----------------|\n");
+    printf("|    Min (ms) | %05.2f           |\n", get_link_min(ls));
+    printf("|-------------|-----------------|\n");
 }
 
 float get_link_avg(struct link_stats* ls) {
